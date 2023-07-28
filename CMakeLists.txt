@@ -17,12 +17,12 @@ add_executable(read_adc
     adc_reader.c
 )
 
-## Use USB instead of UART default
+## Use USB or  UART default
 pico_enable_stdio_usb(read_adc 1)
 pico_enable_stdio_uart(read_adc 0)
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(read_adc pico_stdlib)
+target_link_libraries(read_adc pico_stdlib hardware_adc )
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(read_adc)
