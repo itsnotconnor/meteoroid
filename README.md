@@ -1,9 +1,9 @@
-# snowball
+# meteoroid
 Pi Pico ADC Reader
 
 
 # build
-cd into snowball project dir
+cd into meteoroid project dir
 
 rm -rf build
 
