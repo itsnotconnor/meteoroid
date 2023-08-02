@@ -22,7 +22,7 @@ pico_enable_stdio_usb(read_adc 1)
 pico_enable_stdio_uart(read_adc 1)
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(read_adc pico_stdlib hardware_adc )
+target_link_libraries(read_adc pico_stdlib hardware_adc hardware_spi)
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(read_adc)

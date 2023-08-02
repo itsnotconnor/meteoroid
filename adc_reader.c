@@ -5,7 +5,6 @@
  */
 
 
-
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
@@ -14,6 +13,7 @@
 
 // #include "pico/binary_info.h"
 // #include "hardware/spi.h"
+#include "max31856.h"
 
 /// \tag::adc_reader[]
 
