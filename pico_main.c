@@ -15,7 +15,7 @@
 // #include "hardware/spi.h"
 #include "max31856.h"
 
-/// \tag::adc_reader[]
+/// \tag::pico_main[]
 
 #define UART_ID uart0
 #define BAUD_RATE 115200
@@ -67,6 +67,9 @@ int main() {
     // Make sure GPIO is high-impedance, no pullups etc
     adc_gpio_init(26);
 
+    // Init max31856 sensor
+    max31856_init();
+
     /* LED setup */
 #ifndef PICO_DEFAULT_LED_PIN
 #warning blink requires a board with a regular LED
@@ -76,7 +79,7 @@ int main() {
     gpio_set_dir(LED_PIN, GPIO_OUT);
 #endif
 
-
+    uint32_t counter = 0;
     // Read temp forever
     while(1){
 
@@ -89,6 +92,11 @@ int main() {
 
         printf("%x  ", (char)((temp_onboard & 0xFF00) >> 8));
         printf("%x\n", (char)((temp_onboard & 0x00FF) >> 0));
+
+        // Read Max31856
+        float temp_thermocouple = readCelsius();
+        printf("Thermocouple: %f C\n", temp_thermocouple);
+
 
         // Send out a string, with CR/LF conversions
         uart_puts(UART_ID, " Hello, worlds!\n");
@@ -109,8 +117,11 @@ int main() {
         gpio_put(LED_PIN, 0);
         sleep_ms(850);
 #endif
+        // Increment counter
+        counter++;
+
     }
 
 }
 
-/// \end::adc_reader[]
+/// \end::pico_main[]

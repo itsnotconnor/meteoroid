@@ -13,16 +13,18 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 # Main
-add_executable(read_adc
-    adc_reader.c
+add_executable(main
+    pico_main.c
+    max31856.c
+    max31856.h
 )
 
 ## Use USB or  UART default
-pico_enable_stdio_usb(read_adc 1)
-pico_enable_stdio_uart(read_adc 1)
+pico_enable_stdio_usb(main 1)
+pico_enable_stdio_uart(main 1)
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(read_adc pico_stdlib hardware_adc hardware_spi)
+target_link_libraries(main pico_stdlib hardware_adc hardware_spi hardware_gpio)
 
 # create map/bin/hex/uf2 file in addition to ELF.
-pico_add_extra_outputs(read_adc)
+pico_add_extra_outputs(main)

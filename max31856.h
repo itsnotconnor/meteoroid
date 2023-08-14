@@ -13,19 +13,33 @@ Pulled from adafruit
 /**************************************************************************/
 
 #include <stdio.h>
+#include "pico/binary_info.h"
+#include "pico/stdlib.h"
+#include "hardware/gpio.h"
+#include "hardware/spi.h"
 
-  /*!    @brief  For compatibility with older versions
-         @returns Temperature in F or 0x on failure! 
-    */
+/**************************************************************************/
+/*!
+    @brief  <init>
+    @returns void
+*/
+/**************************************************************************/
+void  max31856_init(void);
 
-// class MAX6675 {
-// public:
-//   MAX6675(int8_t SCLK, int8_t CS, int8_t MISO);
-
+/**************************************************************************/
+/*!
+    @brief  Read the Celsius temperature
+    @returns Temperature in C or NAN on failure!
+*/
+/**************************************************************************/
 float readCelsius(void);
+
+/**************************************************************************/
+/*!
+    @brief  Read the Fahenheit temperature
+    @returns Temperature in F or NAN on failure!
+*/
+/**************************************************************************/
 float readFahrenheit(void);
 
-// private:
-//   int8_t sclk, miso, cs;
-//   uint8_t spiread(void);
-// };
+
