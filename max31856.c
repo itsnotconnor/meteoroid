@@ -60,8 +60,11 @@ void max31856_init(){
     gpio_set_function(PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI);
     gpio_set_function(PICO_DEFAULT_SPI_TX_PIN, GPIO_FUNC_SPI);
 
-    // Make the SPI pins available to picotool
-    bi_decl(bi_2pins_with_func(PICO_DEFAULT_SPI_TX_PIN, PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI));
+    gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
+
+    // Make the all 3 SPI pins available to picotool (rx, tx, sck) **CS is manually triggered**  
+    bi_decl(bi_3pins_with_func(PICO_DEFAULT_SPI_RX_PIN, PICO_DEFAULT_SPI_TX_PIN, PICO_DEFAULT_SPI_SCK_PIN, GPIO_FUNC_SPI));
+
 
     // Chip select is active-low, so we'll initialise it to a driven-high state
     gpio_init(PICO_DEFAULT_SPI_CSN_PIN);
@@ -87,14 +90,14 @@ float readCelsius(void) {
         v |= (uint16_t)buf[1];
         if (v & 0x4) {
           // uh oh, no thermocouple attached!
-          return 0xBADBADFF;
+          return (float)0xBADBADFF;
           // return -100;
         }
         v >>= 3;
         return (float)v * 0.25;
     }
     else{
-      return 0xBEEFBEEF;
+      return (float)0xBEEFBEEF;
     }
 
 }

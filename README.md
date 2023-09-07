@@ -24,3 +24,5 @@ Release BOOT_SEL once plugged in, and drag and drop .uf2 file over the mounted s
 If USB is failing to appear in PC devices, ensure that CMAKE is set to use USB and UART, and the tinyUSB lib has been checked out in the pico-sdk.
 
 If not, run: 'git submodule update --init' in pico-sdk dir
+
+Running from vscode terminal/tasks does not work (cant find PICO_TOOLCHAIN_PATH) must do from outside Terminal 
