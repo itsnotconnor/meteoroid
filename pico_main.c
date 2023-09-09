@@ -27,6 +27,11 @@
 
 #define TEMP_ONBOARD_ADC_CHAN 4U
 
+#define SYNC_BYTE_UPPER 0xFE
+#define SYNC_BYTE_LOWER 0xCA
+
+#define PACKET_LEN 13U
+
 
 static inline float convert_adc(uint16_t raw){
     return ((float)raw * 3.3f / (1 << 12));
@@ -84,60 +89,58 @@ int main() {
     // Read temp forever
     while(1){
 
-        /*
-        Debug Print on USB to Host PC
-        */
-        printf("%d, ",counter);
+        int index = 0;
+        uint8_t packet[PACKET_LEN];
+
+        /* Place Sync Bytes */
+        packet[index] = (char) SYNC_BYTE_LOWER;  index++;
+        packet[index] = (char) SYNC_BYTE_UPPER;  index++;
+        /* Place counter */
+        packet[index] = (char)((counter & 0x000000FF) >> 0);  index++;
+        packet[index] = (char)((counter & 0x0000FF00) >> 8);  index++;
+        packet[index] = (char)((counter & 0x00FF0000) >> 16); index++;
+        packet[index] = (char)((counter & 0xFF000000) >> 24); index++;
 
         uint16_t temp_onboard_raw = read_adc(TEMP_ONBOARD_ADC_CHAN);
         //>>> 27 - (0.619556 - 0.706)/0.001721 == ~77.2289 degrees (double check this - slightly off)
         float temp_onboard_f = 27 - (convert_adc(temp_onboard_raw) - 0.706)/0.001721 - 10;// Added an additional -10 offset?? ;
         //printf("Temp_onboard: Celsius= %f : Fahrenheit= %f\n", (temp_onboard_f-32)*5/9, temp_onboard_f);
-        printf("%f, %f, ", (temp_onboard_f-32)*5/9, temp_onboard_f);
-
+        float temp_onboard_c = (temp_onboard_f-32)*5/9;
         // Read Max31856 in C and F (F is just converted C)
         float temp_thermocouple = readCelsius();
         //printf("Thermocouple: Celsius= %f : ", temp_thermocouple);
-        printf("%f, ", temp_thermocouple);
         temp_thermocouple = readFahrenheit();
-        printf("%f \n", temp_thermocouple);
 
-        /*
-        Send chars over usb otg/serial uart
-        */
-        uart_putc_raw(UART_ID, (char)((counter & 0x000000FF) >> 0)); // fourth byte
-        uart_putc_raw(UART_ID, (char)((counter & 0x0000FF00) >> 8)); // third byte 
-        uart_putc_raw(UART_ID, (char)((counter & 0x00FF0000) >> 16)); // second byte
-        uart_putc_raw(UART_ID, (char)((counter & 0xFF000000) >> 24)); // first byte 
-        uart_puts(UART_ID, "$");
         /*
         Get raw bytes from onboard temp and send to device
         */
-        uart_putc_raw(UART_ID, (char)((temp_onboard_raw & 0xFF00) >> 8)); // first byte 
-        uart_putc_raw(UART_ID, (char)((temp_onboard_raw & 0x00FF) >> 0)); // second byte
-        uart_puts(UART_ID, "$");
+        packet[index] = (char)((temp_onboard_raw & 0x00FF) >> 0); index++;
+        packet[index] = (char)((temp_onboard_raw & 0xFF00) >> 8); index++;
+        
         /*
         Get f32 Fahrenheit and send bytes to device TODO
         */
-        int index = 0;
-        char outbox[4];
         unsigned long d = *(unsigned long *)&temp_thermocouple;
-        outbox[index] = d & 0x00FF; index++;
-        outbox[index] = (d & 0xFF00) >> 8; index++;
-        outbox[index] = (d & 0xFF0000) >> 16; index++;
-        outbox[index] = (d & 0xFF000000) >> 24; index++;
-        while( index < 0){
-            uart_putc_raw(UART_ID, outbox[index]); // byte
-            index--;
+        packet[index] = (char)(d & 0x000000FF) >> 0;  index++;
+        packet[index] = (char)(d & 0x0000FF00) >> 8;  index++;
+        packet[index] = (char)(d & 0x00FF0000) >> 16; index++;
+        packet[index] = (char)(d & 0xFF000000) >> 24; index++;
+        // end of line
+        packet[index] = (char)0x0a; index++; // \n
+
+        // Send data byte by byte
+        for (int j=0 ; j<PACKET_LEN; j++){
+            char byte_send = (char)packet[j];
+            //Send over Pico USB  serial 
+            printf("%c", byte_send);
+            //Send over Pico GPIO serial UART pins
+            uart_putc_raw(UART_ID,byte_send);
         }
-        uart_puts(UART_ID, "\n");
 
-        sleep_ms(100);
-
+        sleep_ms(2000);
         /*
         Toggle LED
         */
-
 #ifndef PICO_DEFAULT_LED_PIN
 #warning blink requires a board with a regular LED
 #else
@@ -148,7 +151,6 @@ int main() {
 #endif
         // Increment counter
         counter++;
-
     }
 
 }
