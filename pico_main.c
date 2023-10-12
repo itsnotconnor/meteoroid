@@ -17,6 +17,9 @@
 
 /// \tag::pico_main[]
 
+#define LOW  0
+#define HIGH 1
+
 #define UART_ID uart0
 #define BAUD_RATE 115200
 
@@ -24,6 +27,8 @@
 // datasheet for information on which other pins can be used.
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
+
+#define DATA_REQ_PIN 9 //GPIO9
 
 #define TEMP_ONBOARD_ADC_CHAN 4U
 
@@ -85,72 +90,80 @@ int main() {
     gpio_set_dir(LED_PIN, GPIO_OUT);
 #endif
 
+    const uint data_req = DATA_REQ_PIN;
+    gpio_init(data_req);
+    gpio_set_dir(data_req, GPIO_IN);
+
     uint32_t counter = 0;
     // Read temp forever
     while(1){
 
-        int index = 0;
-        uint8_t packet[PACKET_LEN];
+        sleep_ms(10);
+        bool is_master_ready = gpio_get(data_req);
 
-        /* Place Sync Bytes */
-        packet[index] = (char) SYNC_BYTE_LOWER;  index++;
-        packet[index] = (char) SYNC_BYTE_UPPER;  index++;
-        /* Place counter */
-        packet[index] = (char)((counter & 0x000000FF) >> 0);  index++;
-        packet[index] = (char)((counter & 0x0000FF00) >> 8);  index++;
-        packet[index] = (char)((counter & 0x00FF0000) >> 16); index++;
-        packet[index] = (char)((counter & 0xFF000000) >> 24); index++;
+        if(is_master_ready){
+            int index = 0;
+            uint8_t packet[PACKET_LEN];
 
-        uint16_t temp_onboard_raw = read_adc(TEMP_ONBOARD_ADC_CHAN);
-        //>>> 27 - (0.619556 - 0.706)/0.001721 == ~77.2289 degrees (double check this - slightly off)
-        float temp_onboard_f = 27 - (convert_adc(temp_onboard_raw) - 0.706)/0.001721 - 10;// Added an additional -10 offset?? ;
-        //printf("Temp_onboard: Celsius= %f : Fahrenheit= %f\n", (temp_onboard_f-32)*5/9, temp_onboard_f);
-        float temp_onboard_c = (temp_onboard_f-32)*5/9;
-        // Read Max31856 in C and F (F is just converted C)
-        float temp_thermocouple = readCelsius();
-        //printf("Thermocouple: Celsius= %f : ", temp_thermocouple);
-        temp_thermocouple = readFahrenheit();
+            /* Place Sync Bytes */
+            packet[index] = (char) SYNC_BYTE_LOWER;  index++;
+            packet[index] = (char) SYNC_BYTE_UPPER;  index++;
+            /* Place counter */
+            packet[index] = (char)((counter & 0x000000FF) >> 0);  index++;
+            packet[index] = (char)((counter & 0x0000FF00) >> 8);  index++;
+            packet[index] = (char)((counter & 0x00FF0000) >> 16); index++;
+            packet[index] = (char)((counter & 0xFF000000) >> 24); index++;
 
-        /*
-        Get raw bytes from onboard temp and send to device
-        */
-        packet[index] = (char)((temp_onboard_raw & 0x00FF) >> 0); index++;
-        packet[index] = (char)((temp_onboard_raw & 0xFF00) >> 8); index++;
-        
-        /*
-        Get f32 Fahrenheit and send bytes to device TODO
-        */
-        unsigned long d = *(unsigned long *)&temp_thermocouple;
-        packet[index] = (char)(d & 0x000000FF) >> 0;  index++;
-        packet[index] = (char)(d & 0x0000FF00) >> 8;  index++;
-        packet[index] = (char)(d & 0x00FF0000) >> 16; index++;
-        packet[index] = (char)(d & 0xFF000000) >> 24; index++;
-        // end of line
-        packet[index] = (char)0x0a; index++; // \n
+            uint16_t temp_onboard_raw = read_adc(TEMP_ONBOARD_ADC_CHAN);
+            //>>> 27 - (0.619556 - 0.706)/0.001721 == ~77.2289 degrees (double check this - slightly off)
+            float temp_onboard_f = 27 - (convert_adc(temp_onboard_raw) - 0.706)/0.001721 - 10;// Added an additional -10 offset?? ;
+            //printf("Temp_onboard: Celsius= %f : Fahrenheit= %f\n", (temp_onboard_f-32)*5/9, temp_onboard_f);
+            float temp_onboard_c = (temp_onboard_f-32)*5/9;
+            // Read Max31856 in C and F (F is just converted C)
+            float temp_thermocouple = readCelsius();
+            //printf("Thermocouple: Celsius= %f : ", temp_thermocouple);
+            temp_thermocouple = readFahrenheit();
 
-        // Send data byte by byte
-        for (int j=0 ; j<PACKET_LEN; j++){
-            char byte_send = (char)packet[j];
-            //Send over Pico USB  serial 
-            printf("%c", byte_send);
-            //Send over Pico GPIO serial UART pins
-            uart_putc_raw(UART_ID,byte_send);
+            /*
+            Get raw bytes from onboard temp and send to device
+            */
+            packet[index] = (char)((temp_onboard_raw & 0x00FF) >> 0); index++;
+            packet[index] = (char)((temp_onboard_raw & 0xFF00) >> 8); index++;
+            
+            /*
+            Get f32 Fahrenheit and send bytes to device TODO
+            */
+            unsigned long d = *(unsigned long *)&temp_thermocouple;
+            packet[index] = (char)(d & 0x000000FF) >> 0;  index++;
+            packet[index] = (char)(d & 0x0000FF00) >> 8;  index++;
+            packet[index] = (char)(d & 0x00FF0000) >> 16; index++;
+            packet[index] = (char)(d & 0xFF000000) >> 24; index++;
+            // end of line
+            packet[index] = (char)0x0a; index++; // \n
+
+            // Send data byte by byte
+            for (int j=0 ; j<PACKET_LEN; j++){
+                char byte_send = (char)packet[j];
+                //Send over Pico USB  serial 
+                printf("%c", byte_send);
+                //Send over Pico GPIO serial UART pins
+                uart_putc_raw(UART_ID,byte_send);
+            }
+
+            /*
+            Toggle LED
+            */
+    #ifndef PICO_DEFAULT_LED_PIN
+    #warning blink requires a board with a regular LED
+    #else
+            gpio_put(LED_PIN, 1);
+            sleep_ms(750);
+            gpio_put(LED_PIN, 0);
+            sleep_ms(750);
+    #endif
+            // Increment counter
+            counter++;
         }
-
-        sleep_ms(2000);
-        /*
-        Toggle LED
-        */
-#ifndef PICO_DEFAULT_LED_PIN
-#warning blink requires a board with a regular LED
-#else
-        gpio_put(LED_PIN, 1);
-        sleep_ms(750);
-        gpio_put(LED_PIN, 0);
-        sleep_ms(750);
-#endif
-        // Increment counter
-        counter++;
     }
 
 }
