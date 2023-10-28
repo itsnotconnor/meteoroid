@@ -90,14 +90,14 @@ float readCelsius(void) {
         v |= (uint16_t)buf[1];
         if (v & 0x4) {
           // uh oh, no thermocouple attached!
-          return (float)0xBADBADFF;
+          return (float)-273.0F;
           // return -100;
         }
         v >>= 3;
         return (float)v * 0.25;
     }
     else{
-      return (float)0xBEEFBEEF;
+      return (float)-273.0F;
     }
 
 }
